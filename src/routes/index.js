@@ -10,7 +10,7 @@ const getApiInfo = async () => {
   const urlApiMovies = await axios.get(
     `http://api.tvmaze.com/search/shows?q=star%20wars.`
   );
-  console.log(urlApiMovies);
+  console.log("urlApiMovies: ", urlApiMovies);
 
   await urlApiMovies.data.map((e) => {
     apiInfoMovies.push({
@@ -27,21 +27,21 @@ const getApiInfo = async () => {
 router.get("/movies", async (req, res) => {
   const { name } = req.query;
   let allMovies = await getApiInfo();
-  
   if (name) {
     let searchResults = await axios.get(
       `https://api.tvmaze.com/search/shows?q=${name}`
     );
-    console.log(searchResults);
+    console.log("searchResults: ", searchResults);
     let cleanResults = [];
     await searchResults.data.map((e) => {
       cleanResults.push({
         id: e.show.id,
         name: e.show.name,
-        image: e.show.image.medium,
+        image: e.show.image ///e.show.image.medium REVISAR QUE PASA CON ESTE MEDIUM, a la 3era busqueda seguida crashea
       });
     });
-    cleanResults.length ? res.send(cleanResults) : res.send("not found");
+    console.log("cleanResults: ", cleanResults);
+    cleanResults.length ? res.send(cleanResults) : res.send("Couln't find any movies/shows with that name :(");
   } else {
     res.send(allMovies);
   }
@@ -52,23 +52,24 @@ router.get("/movies", async (req, res) => {
 async function getMovieByID(id) {
   try {
     let movie = await axios.get(`https://api.tvmaze.com/shows/${id}`);
+    console.log("movie", movie);
     return {
-      id: movie.id,
-      name: movie.name,
-      language: movie.language,
-      genres: movie.genres.map((el) => el), //es un array de strings
-      launching: movie.premiered,
-      image: movie.image.original,
-      summary: movie.summary,
-      rating: movie.rating.average,
+      id: movie.data.id,
+      name: movie.data.name,
+      language: movie.data.language,
+      genres: movie.data.genres, //es un array de strings
+      launching: movie.data.premiered,
+      image: movie.data.image.original,
+      summary: movie.data.summary,
+      rating: movie.data.rating.average,
       //LAS REVIEEEEEWS
     };
   } catch (err) {
-    return [];
+    return ("getMOvieByID did not work  :(", err);
   }
 }
 router.get("/movies/:id", async (req, res) => {
-  const id = req.params.id;
+  const {id} = req.params;
   try {
     let movieapi = await getMovieByID(id);
     if (movieapi) res.status(200).send(movieapi);
@@ -100,8 +101,8 @@ router.get("/moviereviews/:id", async (req, res) => {
 });
 
 ////////////////////POST REVIEW///////////////////
-router.post("/moviereview", async (req, res) => {
-  //   let movieId = req.params.id;
+router.post("/moviereview/:id", async (req, res) => {
+    let movieId = req.params.id;
   try {
     let { authorUser, content, movieId } = req.body;
     console.log(req.body);
@@ -116,24 +117,25 @@ router.post("/moviereview", async (req, res) => {
   }
 });
 
-/////////////////////POST USER////////////////////
+// /////////////////////POST USER////////////////////
 // router.post("/user", async (req, res) => {
-//         try {
+//         // try {
 //           let {
 //             username,
 //             password,
 //           } = req.body;
-//           console.log(req.body);
+//           console.log("req.body: ", req.body);
 //           let createdUser = await User.create({
 //             //CHEQUEAR QUE USERNAME NO EXISTA YA EN LA BASE
 //             username,
 //             password,
 //           });
-//           res.json({ message: "Usuario creado con exito", createdUser });
-//         } catch (error) {
-//           res.send("Hubo un problema al crear tu usario", error);
-//         }
-//       });
+//           res.send('Usuario creado con exito',  createdUser)
+//         //   res.json({ message: "Usuario creado con exito", createdUser });
+//         // } catch (error) {
+//         //   res.send("Hubo un problema al crear tu usario", error);
+//         // }
+// });
 
 //POST FAVMOVIE
 //DELETE FAVMOVIE
