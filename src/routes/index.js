@@ -1,3 +1,4 @@
+
 const { Op } = require("sequelize");
 const { Router } = require("express");
 const axios = require("axios");
@@ -31,13 +32,13 @@ router.get("/movies", async (req, res) => {
     let searchResults = await axios.get(
       `https://api.tvmaze.com/search/shows?q=${name}`
     );
-    console.log("searchResults: ", searchResults);
+    console.log("searchResults: ", searchResults.data);
     let cleanResults = [];
     await searchResults.data.map((e) => {
       cleanResults.push({
         id: e.show.id,
         name: e.show.name,
-        image: e.show.image ///e.show.image.medium REVISAR QUE PASA CON ESTE MEDIUM, a la 3era busqueda seguida crashea
+        image: e.show.image.medium //
       });
     });
     console.log("cleanResults: ", cleanResults);
