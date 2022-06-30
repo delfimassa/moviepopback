@@ -139,22 +139,24 @@ router.get("/movies/:id", async (req, res) => {
 router.post("/users", async (req, res) => {
   try {
     let { username, email, password } = req.body;
-    console.log("req.body: ", req.body);
+    console.log("////////POST req.body: ", req.body);
 
-    const [user, created] = await User.findOrCreate({
-      where: { username: username, email:email }, //x ej quiero crear una delfimassa
-      defaults: {
-        password: password, //si no existe ya una,  delfimassa tendria una pswd que le mande tambien por body x ej delfi1234
-      },
+    const userCheck = await User.findAll({
+      where: { 
+        [Op.or]: [{username: username}, {email:email}]}, 
+     
     });
-    console.log(user.username); //delfimassa
-    console.log(user.password); // si se creo la nueva delfimassa la pswd sera delfi1234, si me trajo una que ya existia de antes, la pswd sera otra cosa seguramente
-    console.log(created); // The boolean indicating whether this instance was just created
-    if (created) {
-      console.log(user.password); //delfi1234
-      res.json({ message: "Usuario creado con exito", user });
+    console.log("/////POST userCheck:", userCheck); 
+    if (userCheck.length > 0) {
+      res.status(404).json({ message: "Ya existe un usuario con ese nombre o email", userCheck });
     } else {
-      res.json({ message: "Ya existe un usuario con ese nombre", user });
+      const newUser = await User.create({
+        username: username,
+        email: email,
+        password: password
+      });
+      res.status(200).json({ message: "Usuario creado con exito", newUser });
+
     }
   } catch (error) {
     res.status(error).send(req.body);
