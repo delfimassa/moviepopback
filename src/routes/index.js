@@ -142,21 +142,25 @@ router.post("/users", async (req, res) => {
     console.log("////////POST req.body: ", req.body);
 
     const userCheck = await User.findAll({
-      where: { 
-        [Op.or]: [{username: username}, {email:email}]}, 
-     
+      where: {
+        [Op.or]: [{ username: username }, { email: email }],
+      },
     });
-    console.log("/////POST userCheck:", userCheck); 
+    console.log("/////POST userCheck:", userCheck.dataValues);
     if (userCheck.length > 0) {
-      res.status(404).json({ message: "Ya existe un usuario con ese nombre o email", userCheck });
+      res
+        .status(404)
+        .json({
+          message: "Ya existe un usuario con ese nombre o email",
+          userCheck,
+        });
     } else {
       const newUser = await User.create({
         username: username,
         email: email,
-        password: password
+        password: password,
       });
       res.status(200).json({ message: "Usuario creado con exito", newUser });
-
     }
   } catch (error) {
     res.status(error).send(req.body);
@@ -164,9 +168,9 @@ router.post("/users", async (req, res) => {
 });
 
 // GET USERS
-const getDbUsers = async () => {
+const getAllUsers = async () => {
   const dbUsers = await User.findAll();
-  console.log("dbUsers: ", dbUsers); 
+  console.log("dbUsers: ", dbUsers);
   const dbData = await dbUsers.map((e) => {
     return {
       id: e.id,
@@ -175,19 +179,58 @@ const getDbUsers = async () => {
       password: e.password,
     };
   });
-  console.log("dbData desde la  funcion", dbData)
+  console.log("dbData desde la  funcion", dbData);
   return dbData;
 };
 
-router.get("/users", async(req, res)=>{
-  let allUsers = await getDbUsers();
-  console.log("///////////allUsers: ", allUsers)
-  if(allUsers){
-    res.status(200).send(allUsers);
-  }else{
-    res.status(404).send("no users found")
+// router.get("/users", async (req, res) => {
+//   let allUsers = await getDbUsers();
+//   console.log("///////////allUsers: ", allUsers);
+ 
+// });
+
+//////////////////GET ALL USERS Y GET(SEARCH) USER BY NAME//////////////////
+router.get("/users", async (req, res) => {
+  const { email } = req.query;
+  let allUsers = await getAllUsers();
+  if (email) {
+    let searchResults = await User.findByPk(email);
+    if (searchResults !== null) {
+      console.log("searchResults: ", searchResults.data);
+      res.send(searchResults);
+    }
+  } else {
+    if (allUsers) {
+      res.status(200).send(allUsers);
+    } else {
+      res.status(404).send("no users found");
+    }
   }
-})
+});
+
+router.post("/user", async (req, res) => {
+  try {
+    let { email, password } = req.body;
+    console.log("///////POST-LOGIN req.body: ", req.body);
+    const userCheck = await User.findByPk(email);
+
+    if (userCheck !== null) {
+      console.log("/////POST-LOGIN userCheck:", userCheck.dataValues);
+      if (userCheck.dataValues.password !== password) {
+        res.status(404).json({ message: "Contraseña incorrecta", userCheck });
+      }
+      if (userCheck.dataValues.password === password) {
+        res.status(200).json({ message: "Login exitoso", userCheck });
+      }
+    } else {
+      res
+        .status(404)
+        .json({ message: "No existe un usuario con ese email", userCheck });
+    }
+  } catch (error) {
+    res.status(error).send(req.body);
+  }
+});
 
 //POST FAVMOVIE
 //DELETE FAVMOVIE
