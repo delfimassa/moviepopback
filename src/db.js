@@ -30,16 +30,26 @@ sequelize.models = Object.fromEntries(capsEntries);
 
 // En sequelize.models están todos los modelos importados como propiedades
 // Para relacionarlos hacemos un destructuring
-const { User, Review } = sequelize.models;
+const { User, Reviews } = sequelize.models;
 
 // relaciones
 // The A.hasMany(B) association means that a One-To-Many relationship exists between A and B, with the foreign key being defined in the target model (B).
 // Movie.hasMany(Review); //ESTO YA NO IRIA PORQUE VUELA EL MODELO MOVIE
 //Review.belongsTo(Movie); //YA NO VA
-User.hasMany(Review, {
-    foreignKey: 'authorUser'
-  }); 
-Review.belongsTo(User);
+// User.hasMany(Review, { onDelete: "cascade"}); 
+// Review.belongsTo(User, {foreignKey: {allowNull: false}});
+// User.hasMany(Review, {
+//   foreignKey: 'authorUser'
+// }); 
+// Review.belongsTo(User);
+User.hasMany(Reviews, {
+  onDelete: "cascade"
+});
+Reviews.belongsTo(User, {
+  foreignKey: {
+    allowNull: false
+  }
+})
 //no habria que usar el through en User en vez de eso de foreighn key?
 
 module.exports = {

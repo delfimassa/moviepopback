@@ -1,27 +1,25 @@
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
 const { Router } = require("express");
 const axios = require("axios");
-const { Review, User, conn } = require("../db");
+const { Reviews, User, conn } = require("../db");
 const router = Router();
 
 //////////////////////GET ALL MOVIES TO SHOW @ HOME///////////////////
 const getApiInfo = async () => {
   const apiInfoMovies = [];
-  const urlApiMovies = await axios.get(
-    `http://api.tvmaze.com/search/shows?q=star%20wars.`
-  );
+  const urlApiMovies = await axios.get(`http://api.tvmaze.com/shows`);
   console.log("urlApiMovies: ", urlApiMovies);
 
   await urlApiMovies.data.map((e) => {
     let movieImage = "";
-    if (e.show.image !== null) {
-      movieImage = e.show.image.medium;
+    if (e.image !== null) {
+      movieImage = e.image.medium;
     } else {
       movieImage = " ";
     }
     apiInfoMovies.push({
-      id: e.show.id,
-      name: e.show.name,
+      id: e.id,
+      name: e.name,
       image: movieImage,
     });
   });
@@ -65,6 +63,7 @@ async function getMovieByID(id) {
   try {
     let movie = await axios.get(`https://api.tvmaze.com/shows/${id}`);
     console.log("movie", movie);
+    let movieReviews = getMovieReviews(id);
     let movieImage = "";
     if (movie.data.image !== null) {
       movieImage = movie.data.image.original;
@@ -80,12 +79,29 @@ async function getMovieByID(id) {
       image: movieImage,
       summary: movie.data.summary ? movie.data.summary : " ",
       rating: movie.data.rating.average ? movie.data.rating.average : 0,
-      //LAS REVIEEEEEWS
+      // reviews: movieReviews
     };
   } catch (err) {
     return "getMOvieByID did not work  :(", err;
   }
 }
+
+async function getMovieReviews(id){
+try{
+  let movieReviews = await Reviews.findAll({where:{movieId: id}});
+  let movieReviewsOpen = await movieReviews.map((e) => {
+    return {
+      content: e.content,
+      UserId: e.UserId,
+    };
+  });
+  console.log("movieReviews desde getMovieReviews:" + movieReviewsOpen);
+  return movieReviewsOpen;
+}catch(err){
+  return "getMovieReviews did not work", err;
+}
+}
+
 router.get("/movies/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -96,46 +112,8 @@ router.get("/movies/:id", async (req, res) => {
   }
 });
 
-/////////////////////////GET MOVIE REVIEWS////////////////////////
-// async function getMovieReviews(id) {
-//   try {
-//     let review = await Review.findAll({ where: { name: id } });
-//     return {
-//       content: review.content,
-//       author: review.authorUser,
-//     };
-//   } catch (err) {
-//     return [];
-//   }
-// }
-// router.get("/moviereviews/:id", async (req, res) => {
-//   const id = req.params.id;
-//   try {
-//     let movieReviews = await getMovieReviews(id);
-//     if (movieReviews) res.status(200).send(movieReviews);
-//   } catch (err) {
-//     res.status(404).send("This movie doesn't have any reviews yet");
-//   }
-// });
-
-// ////////////////////POST REVIEW///////////////////
-// router.post("/moviereview/:id", async (req, res) => {
-//     let movieId = req.params.id;
-//   try {
-//     let { authorUser, content, movieId } = req.body;
-//     console.log(req.body);
-//     let createdReview = await Review.create({
-//       authorUser,
-//       content,
-//       movieId,
-//     });
-//     res.json({ message: "Review creado con exito", createdReview });
-//   } catch (error) {
-//     res.send("Hubo un problema al publicar esta review", error);
-//   }
-// });
-
-/////////////////////POST USER////////////////////
+/////////////////POST USERS | REGISTROOOOO////////////////////
+// Recibe la info del usuario a registrar, chequea que no exista ya ese main o username en la db y devuelve al info para el registro fallido o exitoso segun corresponda
 router.post("/users", async (req, res) => {
   try {
     let { username, email, password } = req.body;
@@ -148,12 +126,10 @@ router.post("/users", async (req, res) => {
     });
     console.log("/////POST userCheck:", userCheck.dataValues);
     if (userCheck.length > 0) {
-      res
-        .status(404)
-        .json({
-          message: "Ya existe un usuario con ese nombre o email",
-          userCheck,
-        });
+      res.status(404).json({
+        message: "Ya existe un usuario con ese nombre o email",
+        userCheck,
+      });
     } else {
       const newUser = await User.create({
         username: username,
@@ -167,29 +143,25 @@ router.post("/users", async (req, res) => {
   }
 });
 
-// GET USERS
+//////////////////GET ALL USERS Y GET(SEARCH) USER BY NAME//////////////////
+// responder con allUsers me sirve mas que nada en desarrolllo para chequear desde postman
+//Si llega un nombre por query sirve para devolver la info de usuario (se supone que ya logueado) al front
 const getAllUsers = async () => {
-  const dbUsers = await User.findAll();
-  console.log("dbUsers: ", dbUsers);
-  const dbData = await dbUsers.map((e) => {
-    return {
-      id: e.id,
-      username: e.username,
-      email: e.email,
-      password: e.password,
-    };
-  });
-  console.log("dbData desde la  funcion", dbData);
-  return dbData;
+  const dbUsers = await User.findAll({ include: [{ model: Reviews }] });
+  return dbUsers;
+  // console.log("dbUsers: ", dbUsers);
+  // const dbData = await dbUsers.map((e) => {
+  //   return {
+  //     id: e.id,
+  //     username: e.username,
+  //     email: e.email,
+  //     password: e.password,
+  //   };
+  // });
+  // console.log("dbData desde la  funcion", dbData);
+  // return dbData;
 };
 
-// router.get("/users", async (req, res) => {
-//   let allUsers = await getDbUsers();
-//   console.log("///////////allUsers: ", allUsers);
- 
-// });
-
-//////////////////GET ALL USERS Y GET(SEARCH) USER BY NAME//////////////////
 router.get("/users", async (req, res) => {
   const { email } = req.query;
   let allUsers = await getAllUsers();
@@ -208,6 +180,13 @@ router.get("/users", async (req, res) => {
   }
 });
 
+//////////////////////////////LOG IN ////////////////////////////////////////
+//ESTE POSTEO NO ES PARA GUARDAR EN LA DB, SOLO ES PARA RECIBIR DESDE EL FRONT EL USUARIO QUE SE ESTA QUERIENDO LOGUEAR
+//Busca el usuario
+//   si existe, compara contraseñas
+//       si no es correcta, envia el mje de que no es correcta la contra
+//       si esta correcta, envia info para logueo exitoso
+//   si no existe, envia que no existe el usuario
 router.post("/user", async (req, res) => {
   try {
     let { email, password } = req.body;
@@ -229,6 +208,41 @@ router.post("/user", async (req, res) => {
     }
   } catch (error) {
     res.status(error).send(req.body);
+  }
+});
+
+////////////////////POST REVIEW///////////////////
+router.post("/moviereview", async (req, res) => {
+  try {
+    let { UserId, content, movieId } = req.body;
+    console.log(req.body);
+    let createdReview = await Reviews.create({
+      UserId,
+      content,
+      movieId,
+    });
+    res.json({ message: "Review publicada con exito", createdReview });
+  } catch (error) {
+    res.send("Hubo un problema al publicar esta review", error);
+  }
+});
+
+////////////GET REVIEWS PARA POSTMAN//////////////
+const getAllReviews = async () => {
+  try {
+    const reviews = await Reviews.findAll();
+    return reviews;
+  } catch (err) {
+    res.status(404).send("reviews NOT FOUND");
+  }
+};
+
+router.get("/moviereviews", async (req, res) => {
+  try {
+    let allReviews = await getAllReviews();
+    res.status(200).send(allReviews);
+  } catch (err) {
+    res.status(404).send("no reviews found");
   }
 });
 

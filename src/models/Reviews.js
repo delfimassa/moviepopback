@@ -1,22 +1,23 @@
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-  sequelize.define('Review', {
+  sequelize.define('Reviews', {
     id:{
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       allowNull:false,
       primaryKey:true,
     },
+   content:{
+      type: DataTypes.STRING,
+      // allowNull: false
+      //un maximo de caracteres
+    }, 
     movieId:{
         type: DataTypes.STRING,
         allowNull: false,
     },
-    content:{
-      type: DataTypes.STRING,
-      //un maximo de caracteres
-    }
-    // authoruser: {
+    // authorUser: {
     //   type: DataTypes.STRING,
     //   allowNull: false,
     // },
